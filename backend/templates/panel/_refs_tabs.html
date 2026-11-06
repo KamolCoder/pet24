@@ -1,0 +1,2 @@
+{% if tabs %}<div class="filters">{% for k, l in tabs %}<a class="button {% if c.key == k %}btn{% endif %}" href="{% url 'panel:crud' k %}">{{ l }}</a>{% endfor %}</div>{% endif %}
+{% if c.tabs == 'delivery' %}<div class="filters"><a class="button btn" href="{% url 'panel:crud' 'zones' %}">Зоны</a><a class="button" href="{% url 'panel:shipments' %}">Заявки курьерам</a></div>{% endif %}

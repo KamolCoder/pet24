@@ -1,0 +1,17 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Синк{% endblock %}
+{% block content %}
+<h1>Синк со stockapi<span class="sp"></span>
+  <form method="post">{% csrf_token %}<button class="btn">Синк сейчас</button></form>
+  <form method="post">{% csrf_token %}<input type="hidden" name="full" value="1"><button onclick="return confirm('Перечитать все товары? Это дольше обычного синка.')">Полный синк</button></form>
+</h1>
+<p class="muted">Автоматически: товары и остатки каждые 5 минут, филиалы раз в час. Если «последний успешный» давно не обновлялся — проверьте ключ API и доступность stockapi.</p>
+<div class="tw"><table>
+  <thead><tr><th>Начало</th><th>Что</th><th>Длительность</th><th>Статус</th><th>Результат</th></tr></thead>
+  <tbody>{% for s in page %}<tr><td>{{ s.started_at|date:"d.m H:i:s" }}</td><td>{{ s.get_kind_display }}</td><td>{{ s.duration|dur }}</td>
+    <td>{% if s.ok %}<span class="b ok">ok</span>{% elif s.finished_at %}<span class="b bad">ошибка</span>{% else %}<span class="b warn">идёт</span>{% endif %}</td>
+    <td class="wrap mono small">{% if s.error %}<span class="neg">{{ s.error|truncatechars:300 }}</span>{% else %}{% for k, v in s.result.items %}{{ k }}={{ v }} {% endfor %}{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="muted">Синков ещё не было</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "panel/_pager.html" %}
+{% endblock %}

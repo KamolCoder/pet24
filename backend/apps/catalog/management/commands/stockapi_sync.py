@@ -10,6 +10,5 @@ class Command(BaseCommand):
         parser.add_argument("--full", action="store_true", help="Ignore updated_since, re-read all products")
 
     def handle(self, *args, full=False, **opts):
-        self.stdout.write(f"branches: {sync.sync_branches()}")
-        self.stdout.write(f"products: {sync.sync_products(full=full)}")
-        self.stdout.write(f"stock rows: {sync.sync_stock()}")
+        for step, result in sync.run_all(full=full).items():
+            self.stdout.write(f"{step}: {result}")

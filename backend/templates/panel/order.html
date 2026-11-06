@@ -1,0 +1,73 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Заказ {{ o.number }}{% endblock %}
+{% block content %}
+<h1>Заказ № {{ o.number }} <span class="b {{ o.status|status_badge }}">{{ o.get_status_display }}</span>
+  <span class="b {{ o.payment_status|status_badge }}">{{ o.get_payment_status_display }}</span>
+  <span class="sp"></span><a class="button" href="{% url 'staff:order' o.pk %}">Как видит сборщик</a></h1>
+{% if o.status == 'problem' and o.problem_note %}<div class="flash error">Проблема: {{ o.problem_note }}</div>{% endif %}
+<div class="cols2">
+  <div>
+    <div class="tw"><table>
+      <thead><tr><th>Товар</th><th>Штрихкод</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th></tr></thead>
+      <tbody>{% for i in o.items.all %}<tr><td class="wrap">{{ i.name }}<div class="muted small mono">{{ i.external_id }}</div></td><td class="mono">{{ i.barcode }}</td><td class="num">{{ i.quantity }}</td><td class="num">{{ i.price|money }}</td><td class="num">{{ i.amount|money }}</td></tr>{% endfor %}</tbody>
+      <tfoot>
+        <tr><td colspan="4">Товары</td><td class="num">{{ o.items_total|money }}</td></tr>
+        <tr><td colspan="4">Доставка ({{ o.zone.name|default:"—" }})</td><td class="num">{{ o.delivery_price|money }}</td></tr>
+        <tr><td colspan="4">Итого</td><td class="num">{{ o.total|money }}</td></tr>
+      </tfoot>
+    </table></div>
+
+    <h2>Курьер</h2>
+    <div class="tw"><table><thead><tr><th>Служба</th><th>Статус</th><th>Курьер</th><th class="num">Стоимость</th><th>Создана</th><th>Ошибка</th></tr></thead><tbody>
+      {% for s in shipments %}<tr><td>{{ s.provider }} <span class="muted mono small">{{ s.external_id }}</span></td><td><span class="b {{ s.status|status_badge }}">{{ s.get_status_display }}</span> <span class="muted small">{{ s.raw_status }}</span></td><td>{{ s.courier_name }} {{ s.courier_phone }}</td><td class="num">{{ s.cost|money }}</td><td>{{ s.created_at|date:"d.m H:i" }}</td><td class="wrap small muted">{{ s.error|truncatechars:160 }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="muted">Курьер ещё не вызывался</td></tr>{% endfor %}
+    </tbody></table></div>
+
+    <h2>Оплата</h2>
+    <div class="tw"><table><thead><tr><th>Система</th><th>ID</th><th class="num">Сумма</th><th>Состояние</th></tr></thead><tbody>
+      {% for t in payme %}<tr><td>Payme</td><td class="mono">{{ t.payme_id }}</td><td class="num">{{ t.amount|money }} тийин</td><td>{{ t.get_state_display }}{% if t.reason %} (reason {{ t.reason }}){% endif %}</td></tr>{% endfor %}
+      {% for t in click %}<tr><td>Click</td><td class="mono">{{ t.click_trans_id }}</td><td class="num">{{ t.amount|money }}</td><td>{{ t.get_status_display }}</td></tr>{% endfor %}
+      {% if not payme and not click %}<tr><td colspan="4" class="muted">Транзакций нет</td></tr>{% endif %}
+    </tbody></table></div>
+
+    <h2>История</h2>
+    <div class="tw"><table><tbody>
+      <tr><td>{{ o.created_at|date:"d.m.Y H:i" }}</td><td>создан</td><td></td><td></td></tr>
+      {% for e in o.events.all %}<tr><td>{{ e.created_at|date:"d.m.Y H:i" }}</td><td>{{ e.from_status }} → <b>{{ e.to_status }}</b></td><td>{% if e.user %}{{ e.user.first_name|default:e.user.phone }}{% else %}система{% endif %}</td><td class="wrap muted">{{ e.note }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+
+  <div>
+    <div class="panel"><dl class="kv">
+      <dt>Клиент</dt><dd><a href="{% url 'panel:customer' o.user_id %}">{{ o.customer_name|default:"без имени" }}</a><br>+{{ o.customer_phone }}</dd>
+      <dt>Адрес</dt><dd>{{ o.address }}{% if o.entrance %}, под. {{ o.entrance }}{% endif %}{% if o.floor %}, эт. {{ o.floor }}{% endif %}{% if o.apartment %}, кв. {{ o.apartment }}{% endif %}<br><a class="small" target="_blank" href="https://yandex.uz/maps/?pt={{ o.lng }},{{ o.lat }}&z=17">на карте</a></dd>
+      {% if o.address_comment %}<dt>Курьеру</dt><dd>{{ o.address_comment }}</dd>{% endif %}
+      {% if o.comment %}<dt>Комментарий</dt><dd>{{ o.comment }}</dd>{% endif %}
+      <dt>Филиал</dt><dd>{{ o.branch.name }}</dd>
+      <dt>Сборщик</dt><dd>{% if o.picker %}{{ o.picker.first_name|default:o.picker.phone }}{% else %}—{% endif %}</dd>
+      <dt>Оплата</dt><dd>{{ o.get_payment_method_display }}</dd>
+      <dt>Оплачен</dt><dd>{{ o.paid_at|date:"d.m H:i"|default:"—" }}</dd>
+      <dt>Собран</dt><dd>{{ o.assembled_at|date:"d.m H:i"|default:"—" }}</dd>
+      <dt>Доставлен</dt><dd>{{ o.delivered_at|date:"d.m H:i"|default:"—" }}</dd>
+      {% if o.cancel_reason %}<dt>Отмена</dt><dd>{{ o.cancel_reason }}</dd>{% endif %}
+    </dl></div>
+
+    <h2>Действия</h2>
+    <div class="panel actions">
+      {% if o.status == S.PROBLEM and o.assembled_at %}
+        <form method="post" action="{% url 'panel:order_action' o.pk %}">{% csrf_token %}<input type="hidden" name="action" value="retry_courier"><button class="btn">Вызвать курьера повторно</button></form>
+      {% elif o.status == S.PROBLEM %}
+        <form method="post" action="{% url 'panel:order_action' o.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resume"><input name="note" placeholder="Как решили"><button class="btn">Продолжить сборку</button></form>
+      {% endif %}
+      {% if o.payment_status == 'refund_required' %}
+        <form method="post" action="{% url 'panel:order_action' o.pk %}">{% csrf_token %}<input type="hidden" name="action" value="refunded"><p>Деньги вернули в кабинете {{ o.get_payment_method_display }}?</p><input name="note" placeholder="№ возврата"><button class="btn">Возврат сделан</button></form>
+      {% endif %}
+      {% if o.status != S.DELIVERED and o.status != S.CANCELED %}
+        {% if o.status != S.PROBLEM %}<form method="post" action="{% url 'panel:order_action' o.pk %}">{% csrf_token %}<input type="hidden" name="action" value="problem"><input name="note" placeholder="Что случилось" required><button>В проблемные</button></form>{% endif %}
+        {% if o.status != S.NEW %}<form method="post" action="{% url 'panel:order_action' o.pk %}">{% csrf_token %}<input type="hidden" name="action" value="delivered"><button>Отметить доставленным</button></form>{% endif %}
+        <form method="post" action="{% url 'panel:order_action' o.pk %}" onsubmit="return confirm('Отменить заказ?{% if o.assembled_at %} Чек уже пробит — оформите возврат на кассе.{% endif %}{% if o.payment_status == 'paid' %} Деньги нужно будет вернуть.{% endif %}')">{% csrf_token %}<input type="hidden" name="action" value="cancel"><input name="note" placeholder="Причина отмены"><button class="btn-danger">Отменить</button></form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

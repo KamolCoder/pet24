@@ -1,0 +1,21 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}+{{ c.phone }}{% endblock %}
+{% block content %}
+<h1>+{{ c.phone }} {{ c.full_name }} {% if not c.is_active %}<span class="b bad">заблокирован</span>{% endif %}<span class="sp"></span>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle"><button class="{% if c.is_active %}btn-danger{% endif %}">{% if c.is_active %}Заблокировать{% else %}Разблокировать{% endif %}</button></form></h1>
+<div class="grid">
+  <div class="panel stat"><div class="l">Заказов оплачено</div><div class="v">{{ stats.n }}</div></div>
+  <div class="panel stat"><div class="l">Сумма покупок</div><div class="v">{{ stats.s|money }}</div></div>
+  <div class="panel stat"><div class="l">С нами с</div><div class="v">{{ c.date_joined|date:"d.m.Y" }}</div></div>
+</div>
+<div class="cols">
+  <div><h2>Питомцы</h2><div class="tw"><table><tbody>{% for p in pets %}<tr><td>{{ p.name }}</td><td>{{ p.pet_type.name }}</td><td>{{ p.breed }}</td><td>{{ p.birth_date|date:"d.m.Y" }}</td><td class="num">{% if p.weight_kg %}{{ p.weight_kg|num }} кг{% endif %}</td></tr>{% empty %}<tr><td class="muted">—</td></tr>{% endfor %}</tbody></table></div></div>
+  <div><h2>Адреса</h2><div class="tw"><table><tbody>{% for a in addresses %}<tr><td>{{ a.label }}</td><td class="wrap">{{ a.address }}</td></tr>{% empty %}<tr><td class="muted">—</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+<h2>Заказы</h2>
+<div class="tw"><table>
+  <thead><tr><th>№</th><th>Дата</th><th>Филиал</th><th>Статус</th><th>Оплата</th><th class="num">Сумма</th></tr></thead>
+  <tbody>{% for o in orders %}<tr><td><a href="{% url 'panel:order' o.pk %}">{{ o.number }}</a></td><td>{{ o.created_at|date:"d.m.Y H:i" }}</td><td>{{ o.branch.name }}</td><td><span class="b {{ o.status|status_badge }}">{{ o.get_status_display }}</span></td><td><span class="b {{ o.payment_status|status_badge }}">{{ o.get_payment_status_display }}</span></td><td class="num">{{ o.total|money }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="muted">Заказов нет</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

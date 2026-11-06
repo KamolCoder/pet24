@@ -1,0 +1,153 @@
+{% load panel %}<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}Панель{% endblock %} · Pet24</title>
+<style>
+:root {
+  --bg: #f5f6f8; --panel: #ffffff; --text: #1b1f27; --muted: #69707d; --line: #e3e6eb;
+  --accent: #b84d00; --accent-ink: #ffffff; --hover: #f0f2f5; --brand: #ff7300;
+  --ok: #157347; --ok-bg: #e3f3ea; --warn: #8a5a00; --warn-bg: #fdf1d4;
+  --bad: #b42318; --bad-bg: #fde7e5; --off: #5f6672; --off-bg: #eceef2; --info: #1d4ed8; --info-bg: #e3ebfd;
+  --code: #f1f3f6; --series: #eb6834; --grid: #e8eaee;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1015; --panel: #161920; --text: #e5e7eb; --muted: #959cab; --line: #262a34;
+    --accent: #ff8a3d; --accent-ink: #1b1f27; --hover: #1d212a;
+    --ok: #5fd197; --ok-bg: #11291c; --warn: #f2c14e; --warn-bg: #30250b;
+    --bad: #f68b80; --bad-bg: #351513; --off: #a2a9b6; --off-bg: #232733; --info: #8fb1ff; --info-bg: #17213a;
+    --code: #1d2029; --series: #d95926; --grid: #23272f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+       font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+header { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.bar { max-width: 1320px; margin: 0 auto; padding: 0 16px; height: 52px; display: flex; align-items: center; gap: 18px; }
+.brand { font-weight: 700; white-space: nowrap; letter-spacing: -.01em; }
+.brand i { font-style: normal; color: var(--brand); }
+.brand small { font-weight: 500; color: var(--muted); margin-left: 6px; }
+nav { display: flex; gap: 2px; flex: 1; overflow-x: auto; }
+nav a { padding: 6px 11px; border-radius: 6px; color: var(--muted); white-space: nowrap; }
+nav a:hover { background: var(--hover); text-decoration: none; color: var(--text); }
+nav a.on { background: var(--off-bg); color: var(--text); font-weight: 600; }
+main { max-width: 1320px; margin: 0 auto; padding: 22px 16px 56px; }
+h1 { font-size: 21px; margin: 0 0 18px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+h1 .sp { flex: 1; } h1 button { font-size: 14px; font-weight: 500; }
+h2 { font-size: 14px; margin: 28px 0 10px; display: flex; align-items: baseline; gap: 12px; }
+h2 a, h2 .muted { font-weight: 400; font-size: 13px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.stat .l { color: var(--muted); font-size: 12px; }
+.stat .v { font-size: 24px; font-weight: 700; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.stat .s { color: var(--muted); font-size: 12px; }
+.stat .f { color: var(--muted); font-size: 11px; margin-top: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+a.stat { color: var(--text); } a.stat:hover { text-decoration: none; background: var(--hover); }
+.up { color: var(--ok); } .down { color: var(--bad); }
+.tw { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; white-space: nowrap; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+tbody tr:hover { background: var(--hover); }
+tr:last-child td { border-bottom: 0; }
+tfoot td { font-weight: 600; border-top: 1px solid var(--line); }
+td.wrap { white-space: normal; min-width: 240px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); } .small { font-size: 12px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+.neg { color: var(--bad); font-weight: 600; } .stale { color: var(--warn); }
+.b { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.b.ok { color: var(--ok); background: var(--ok-bg); } .b.warn { color: var(--warn); background: var(--warn-bg); }
+.b.bad { color: var(--bad); background: var(--bad-bg); } .b.off { color: var(--off); background: var(--off-bg); }
+.b.info { color: var(--info); background: var(--info-bg); }
+form { margin: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+label.check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 14px; }
+input, select, button, textarea { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+                        border-radius: 7px; padding: 6px 10px; }
+input, select, button { height: 34px; }
+input[type=checkbox] { height: auto; }
+textarea { min-height: 90px; width: 100%; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button { cursor: pointer; } button:hover { background: var(--hover); }
+.btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn:hover { background: var(--accent); filter: brightness(1.08); }
+.btn-danger { color: var(--bad); border-color: var(--bad); } .btn-danger:hover { background: var(--bad-bg); }
+a.button { font-size: 14px; font-weight: 500; letter-spacing: 0; display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line);
+           color: var(--text); background: var(--panel); } a.button:hover { background: var(--hover); text-decoration: none; }
+a.button.btn { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; }
+.flash.success { background: var(--ok-bg); color: var(--ok); } .flash.error { background: var(--bad-bg); color: var(--bad); }
+.flash.warning { background: var(--warn-bg); color: var(--warn); }
+.pager { display: flex; gap: 14px; align-items: center; margin-top: 12px; color: var(--muted); font-size: 13px; }
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 0; }
+dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.cols2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; } @media (max-width: 900px) { .cols2 { grid-template-columns: 1fr; } }
+.actions { display: flex; flex-direction: column; gap: 14px; }
+.actions form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.actions p { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.form-grid .full { grid-column: 1 / -1; }
+.form-grid input, .form-grid select { width: 100%; }
+.form-grid input[type=checkbox] { width: auto; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }
+.checks > div { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.checks label { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 14px; }
+.fl { font-size: 12px; color: var(--muted); }
+td input, td select { width: 100%; min-width: 70px; max-width: 160px; }
+td input[type=checkbox] { width: auto; min-width: 0; }
+.errorlist { color: var(--bad); margin: 2px 0 0; padding: 0; list-style: none; font-size: 12px; }
+.help { color: var(--muted); font-size: 11px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 10px; }
+.thumbs figure { margin: 0; width: 132px; }
+.thumbs img { width: 132px; height: 132px; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.thumbs figcaption { display: flex; gap: 4px; margin-top: 4px; } .thumbs figcaption input { width: 54px; }
+.dbar { height: 8px; border-radius: 4px; background: var(--series); min-width: 2px; }
+/* chart */
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--grid); stroke-width: 1; }
+.chart .axis { stroke: var(--muted); stroke-width: 1; opacity: .5; }
+.chart .tick { fill: var(--muted); font-size: 11px; }
+.chart .val { fill: var(--text); font-size: 11px; font-weight: 600; }
+.chart .bar { fill: var(--series); }
+.chart .hit { fill: transparent; }
+.chart .col:hover .hit { fill: var(--hover); }
+.chart .col:hover .bar { filter: brightness(1.1); }
+details > summary { cursor: pointer; color: var(--muted); }
+@media (max-width: 640px) { .brand small { display: none; } h1 { font-size: 18px; } }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="brand"><i>🐾</i> Pet24<small>панель</small></div>
+  <nav>
+    {% with a=active %}
+    <a href="{% url 'panel:home' %}" class="{% if a == 'home' %}on{% endif %}">Обзор</a>
+    <a href="{% url 'panel:analytics' %}" class="{% if a == 'analytics' %}on{% endif %}">Аналитика</a>
+    <a href="{% url 'panel:orders' %}" class="{% if a == 'orders' %}on{% endif %}">Заказы</a>
+    <a href="{% url 'panel:products' %}" class="{% if a == 'products' %}on{% endif %}">Каталог</a>
+    <a href="{% url 'panel:queue' %}" class="{% if a == 'queue' %}on{% endif %}">Очередь SKU</a>
+    <a href="{% url 'panel:crud' 'categories' %}" class="{% if a == 'refs' %}on{% endif %}">Справочники</a>
+    <a href="{% url 'panel:crud' 'branches' %}" class="{% if a == 'branches' %}on{% endif %}">Филиалы</a>
+    <a href="{% url 'panel:crud' 'zones' %}" class="{% if a == 'delivery' %}on{% endif %}">Доставка</a>
+    <a href="{% url 'panel:customers' %}" class="{% if a == 'customers' %}on{% endif %}">Клиенты</a>
+    <a href="{% url 'panel:crud' 'staff' %}" class="{% if a == 'staff' %}on{% endif %}">Сотрудники</a>
+    <a href="{% url 'panel:sync' %}" class="{% if a == 'sync' %}on{% endif %}">Синк</a>
+    {% endwith %}
+  </nav>
+  <a href="{% url 'staff:board' %}" class="small">Сборка →</a>
+  <form method="post" action="{% url 'panel:logout' %}">{% csrf_token %}<button>Выйти</button></form>
+</div></header>
+<main>
+{% for m in messages %}<div class="flash {{ m.tags }}">{{ m }}</div>{% endfor %}
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>
