@@ -1,0 +1,81 @@
+{% extends "staff/base.html" %}
+{% block content %}
+<p><a href="{% url 'staff:board' %}">← все заказы</a></p>
+<div class="card">
+  <h2 style="margin-top:0">Заказ № {{ order.number }} <span class="badge {% if order.status == 'problem' %}problem{% endif %}">{{ order.get_status_display }}</span></h2>
+  <div class="muted">{{ order.created_at|date:"d.m H:i" }} · {{ order.branch }} · оплата: {{ order.get_payment_method_display }} ({{ order.get_payment_status_display }})</div>
+  {% if order.comment %}<p><b>Комментарий:</b> {{ order.comment }}</p>{% endif %}
+  {% if order.problem_note and order.status == 'problem' %}<div class="msg error">{{ order.problem_note }}</div>{% endif %}
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>Товар</th><th>Штрихкод</th><th>Кол-во</th><th>Цена</th></tr>
+    {% for i in order.items.all %}
+    <tr><td>{{ i.name }}</td><td class="muted">{{ i.barcode }}</td><td class="qty">{{ i.quantity }}</td><td>{{ i.price|floatformat:0 }}</td></tr>
+    {% endfor %}
+    <tr><td colspan="3">Товары</td><td>{{ order.items_total|floatformat:0 }}</td></tr>
+    <tr><td colspan="3">Доставка</td><td>{{ order.delivery_price|floatformat:0 }}</td></tr>
+    <tr><th colspan="3">Итого</th><th>{{ order.total|floatformat:0 }} сум</th></tr>
+  </table>
+</div>
+
+<div class="card actions">
+  {% if order.status == S.PAID %}
+    <form method="post" action="{% url 'staff:action' order.pk %}">{% csrf_token %}<input type="hidden" name="action" value="start"><button>Начать сборку</button></form>
+  {% elif order.status == S.ASSEMBLING %}
+    <p class="muted">Соберите все позиции, пробейте чек на кассе на эту сумму, затем нажмите кнопку — курьер будет вызван автоматически.</p>
+    <form method="post" action="{% url 'staff:action' order.pk %}">{% csrf_token %}<input type="hidden" name="action" value="assembled"><button>Собрано, чек пробит</button></form>
+  {% endif %}
+
+  {% if order.status != S.DELIVERED and order.status != S.CANCELED %}
+  <details style="margin-top:8px"><summary>Сообщить о проблеме</summary>
+    <form method="post" action="{% url 'staff:action' order.pk %}" style="display:block">{% csrf_token %}
+      <input type="hidden" name="action" value="problem">
+      <textarea name="note" rows="2" placeholder="Например: нет на полке «Корм X 2 кг»" required></textarea>
+      <p><button class="danger">Отправить оператору</button></p>
+    </form>
+  </details>
+  {% endif %}
+
+  {% if is_operator and order.status != S.DELIVERED and order.status != S.CANCELED %}
+  <hr>
+  <b>Оператор</b><br><br>
+  {% if order.status == S.PROBLEM and order.assembled_at %}
+    <form method="post" action="{% url 'staff:action' order.pk %}">{% csrf_token %}<input type="hidden" name="action" value="retry_courier"><button>Вызвать курьера повторно</button></form>
+  {% elif order.status == S.PROBLEM %}
+    <form method="post" action="{% url 'staff:action' order.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resume"><button>Проблема решена — продолжить сборку</button></form>
+  {% endif %}
+  <form method="post" action="{% url 'staff:action' order.pk %}">{% csrf_token %}<input type="hidden" name="action" value="delivered"><button class="secondary">Отметить доставленным</button></form>
+  <form method="post" action="{% url 'staff:action' order.pk %}" onsubmit="return confirm('Отменить заказ?{% if order.assembled_at %} Чек уже пробит — оформите возврат на кассе.{% endif %}{% if order.payment_status == 'paid' %} Деньги нужно вернуть клиенту.{% endif %}')">{% csrf_token %}
+    <input type="hidden" name="action" value="cancel"><input name="note" placeholder="Причина отмены" style="width:220px">
+    <button class="danger">Отменить заказ</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if is_operator %}
+<div class="card">
+  <b>Клиент:</b> {{ order.customer_name }} +{{ order.customer_phone }}<br>
+  <b>Адрес:</b> {{ order.address }}{% if order.entrance %}, подъезд {{ order.entrance }}{% endif %}{% if order.floor %}, этаж {{ order.floor }}{% endif %}{% if order.apartment %}, кв. {{ order.apartment }}{% endif %}
+  {% if order.address_comment %}<br><span class="muted">{{ order.address_comment }}</span>{% endif %}
+</div>
+{% endif %}
+
+{% if shipment %}
+<div class="card">
+  <b>Курьер ({{ shipment.provider }}):</b> {{ shipment.get_status_display }}
+  {% if shipment.courier_name %} · {{ shipment.courier_name }}{% endif %}
+  {% if shipment.courier_phone %} · {{ shipment.courier_phone }}{% endif %}
+  {% if shipment.cost %} · стоимость {{ shipment.cost|floatformat:0 }}{% endif %}
+  {% if shipment.error %}<div class="muted">{{ shipment.error|truncatechars:200 }}</div>{% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <b>История</b>
+  {% for e in order.events.all %}
+    <div class="muted">{{ e.created_at|date:"d.m H:i" }} — {{ e.to_status }}{% if e.user %} ({{ e.user.first_name|default:e.user.phone }}){% endif %}{% if e.note %}: {{ e.note }}{% endif %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

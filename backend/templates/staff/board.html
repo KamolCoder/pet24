@@ -1,0 +1,30 @@
+{% extends "staff/base.html" %}
+{% block head %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block content %}
+{% if is_operator %}
+<form method="get" class="card" style="display:flex;gap:8px;align-items:center">
+  <select name="branch" onchange="this.form.submit()">
+    <option value="">Все филиалы</option>
+    {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select>
+</form>
+{% endif %}
+<div class="columns">
+  {% for status, label, orders in columns %}
+  <div class="col">
+    <h3>{{ label }} <span class="badge {% if status == 'problem' and orders %}problem{% endif %}">{{ orders|length }}</span></h3>
+    {% for o in orders %}
+      <a class="card" href="{% url 'staff:order' o.pk %}">
+        <b>№ {{ o.number }}</b> · {{ o.total|floatformat:0 }} сум
+        <div class="muted">{{ o.created_at|date:"H:i" }} · позиций: {{ o.items.all|length }}{% if is_operator %} · {{ o.branch }}{% endif %}</div>
+        {% if o.status == 'problem' %}<div class="muted" style="color:#d32f2f">{{ o.problem_note|truncatechars:80 }}</div>{% endif %}
+      </a>
+    {% empty %}<div class="muted">—</div>{% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% if done %}
+<h3>Завершены сегодня</h3>
+{% for o in done %}<a class="card" href="{% url 'staff:order' o.pk %}">№ {{ o.number }} · {{ o.get_status_display }} · {{ o.total|floatformat:0 }} сум</a>{% endfor %}
+{% endif %}
+{% endblock %}
