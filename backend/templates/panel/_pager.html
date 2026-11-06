@@ -1,0 +1,6 @@
+{% load panel %}{% if page.paginator.num_pages > 1 %}
+<div class="pager">
+  {% if page.has_previous %}<a href="{% qs page=page.previous_page_number %}">← назад</a>{% endif %}
+  <span>стр. {{ page.number }} из {{ page.paginator.num_pages }} · всего {{ page.paginator.count }}</span>
+  {% if page.has_next %}<a href="{% qs page=page.next_page_number %}">дальше →</a>{% endif %}
+</div>{% endif %}

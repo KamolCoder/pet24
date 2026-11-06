@@ -1,0 +1,30 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Заказы{% endblock %}
+{% block content %}
+<h1>Заказы <span class="muted small">{{ totals.n }} шт · {{ totals.s|money }} сум</span><span class="sp"></span><a class="button" href="{% qs export='csv' page='' %}">Выгрузить CSV</a></h1>
+<form class="filters" method="get">
+  <label>Поиск<input name="q" value="{{ request.GET.q }}" placeholder="№, телефон, имя, адрес"></label>
+  <label>Статус<select name="status"><option value="">Все</option>{% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Оплата<select name="payment_status"><option value="">Все</option>{% for v, l in payment_statuses %}<option value="{{ v }}" {% if request.GET.payment_status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Способ<select name="payment_method"><option value="">Все</option>{% for v, l in payment_methods %}<option value="{{ v }}" {% if request.GET.payment_method == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+  <label>Филиал<select name="branch"><option value="">Все</option>{% for b in branches %}<option value="{{ b.id }}" {% if request.GET.branch == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}</select></label>
+  <label>С<input type="date" name="from" value="{{ request.GET.from }}"></label>
+  <label>По<input type="date" name="to" value="{{ request.GET.to }}"></label>
+  <button class="btn">Найти</button><a class="link small" href="{% url 'panel:orders' %}">сбросить</a>
+</form>
+<div class="tw"><table>
+  <thead><tr><th>№</th><th>Создан</th><th>Филиал</th><th>Статус</th><th>Оплата</th><th class="num">Поз.</th><th class="num">Сумма</th><th>Клиент</th><th>Адрес</th></tr></thead>
+  <tbody>
+  {% for o in page %}
+    <tr><td><a href="{% url 'panel:order' o.pk %}"><b>{{ o.number }}</b></a></td>
+      <td>{{ o.created_at|date:"d.m H:i" }}</td><td>{{ o.branch.name }}</td>
+      <td><span class="b {{ o.status|status_badge }}">{{ o.get_status_display }}</span></td>
+      <td>{{ o.get_payment_method_display }} <span class="b {{ o.payment_status|status_badge }}">{{ o.get_payment_status_display }}</span></td>
+      <td class="num">{{ o.n_items }}</td><td class="num">{{ o.total|money }}</td>
+      <td>{% if o.user_id %}<a href="{% url 'panel:customer' o.user_id %}">+{{ o.customer_phone }}</a>{% endif %}</td>
+      <td class="wrap small muted">{{ o.address|truncatechars:60 }}</td></tr>
+  {% empty %}<tr><td colspan="9" class="muted">Ничего не найдено</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% include "panel/_pager.html" %}
+{% endblock %}

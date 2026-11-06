@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Branch, Product, Stock, SyncState
+from .models import Branch, Product, Stock, SyncLog, SyncState
 from .stockapi import StockApiClient, parse_qty
 
 log = logging.getLogger(__name__)
@@ -134,3 +134,28 @@ def refresh_stock(external_ids: list[str], client: StockApiClient | None = None)
         # price/active may change between delta runs: keep them fresh too
         Product.objects.bulk_update(changed, ["price", "is_active"], batch_size=1000)
         return _apply_stocks(items, _branch_map(), {k: p.id for k, p in by_id.items()})
+
+
+def logged(kind: str, fn, *args, **kwargs):
+    """Run a sync step and record the outcome for the panel."""
+    log_row = SyncLog.objects.create(kind=kind, started_at=timezone.now())
+    try:
+        result = fn(*args, **kwargs)
+    except Exception as e:
+        log_row.error = f"{type(e).__name__}: {e}"[:4000]
+        log_row.finished_at = timezone.now()
+        log_row.save()
+        raise
+    log_row.ok = True
+    log_row.result = result if isinstance(result, dict) else {"count": result}
+    log_row.finished_at = timezone.now()
+    log_row.save()
+    return result
+
+
+def run_all(full: bool = False) -> dict:
+    return {
+        "branches": logged(SyncLog.Kind.BRANCHES, sync_branches),
+        "products": logged(SyncLog.Kind.PRODUCTS_FULL if full else SyncLog.Kind.PRODUCTS, sync_products, full=full),
+        "stock": logged(SyncLog.Kind.STOCK, sync_stock),
+    }

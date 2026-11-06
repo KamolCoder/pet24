@@ -221,3 +221,26 @@ class SyncState(models.Model):
     @classmethod
     def put(cls, key, value):
         cls.objects.update_or_create(key=key, defaults={"value": value})
+
+
+class SyncLog(models.Model):
+    class Kind(models.TextChoices):
+        BRANCHES = "branches", "Филиалы"
+        PRODUCTS = "products", "Товары (дельта)"
+        PRODUCTS_FULL = "products_full", "Товары (полный)"
+        STOCK = "stock", "Остатки"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    ok = models.BooleanField(default=False)
+    result = models.JSONField(default=dict, blank=True)
+    error = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["kind", "-started_at"])]
+
+    @property
+    def duration(self):
+        return (self.finished_at - self.started_at) if self.finished_at else None

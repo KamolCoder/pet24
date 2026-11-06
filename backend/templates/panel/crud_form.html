@@ -1,0 +1,15 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block content %}
+<h1><a href="{% url 'panel:crud' c.key %}">{{ c.title }}</a> / {% if obj %}{{ obj }}{% else %}новая запись{% endif %}</h1>
+{% if c.key == 'branches' and obj %}<p class="muted">ID stockapi: <span class="mono">{{ obj.external_id }}</span> · название и активность приходят из stockapi</p>{% endif %}
+<form method="post" enctype="multipart/form-data" class="panel">{% csrf_token %}
+  {% include "panel/_form_fields.html" %}
+  <div class="filters" style="margin:16px 0 0">
+    <button class="btn">Сохранить</button>
+    <a class="link" href="{% url 'panel:crud' c.key %}">отмена</a>
+    <span style="flex:1"></span>
+    {% if obj and c.can_delete %}<button name="delete" value="1" class="btn-danger" onclick="return confirm('Удалить?')">Удалить</button>{% endif %}
+  </div>
+</form>
+{% endblock %}

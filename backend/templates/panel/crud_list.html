@@ -1,0 +1,14 @@
+{% extends "panel/base.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block content %}
+<h1>{{ c.title }}<span class="sp"></span>{% if c.can_create %}<a class="button btn" href="{% url 'panel:crud_new' c.key %}">+ Добавить</a>{% endif %}</h1>
+{% include "panel/_refs_tabs.html" %}
+{% if c.intro %}<p class="muted">{{ c.intro }}</p>{% endif %}
+{% if c.search %}<form class="filters" method="get"><label>Поиск<input name="q" value="{{ request.GET.q }}"></label><button>Найти</button></form>{% endif %}
+<div class="tw"><table>
+  <thead><tr>{% for label, _ in c.columns %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for obj, cells in rows %}<tr>{% for cell in cells %}<td>{% if forloop.first %}<a href="{% url 'panel:crud_edit' c.key obj.pk %}">{{ cell }}</a>{% else %}{{ cell }}{% endif %}</td>{% endfor %}</tr>
+  {% empty %}<tr><td colspan="{{ c.columns|length }}" class="muted">Пусто</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "panel/_pager.html" %}
+{% endblock %}

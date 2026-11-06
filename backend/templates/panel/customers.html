@@ -1,0 +1,16 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Клиенты{% endblock %}
+{% block content %}
+<h1>Клиенты</h1>
+<form class="filters" method="get">
+  <label>Поиск<input name="q" value="{{ request.GET.q }}" placeholder="телефон или имя"></label>
+  <label>Сортировка<select name="sort"><option value="">новые</option><option value="spent" {% if request.GET.sort == 'spent' %}selected{% endif %}>по сумме покупок</option><option value="orders" {% if request.GET.sort == 'orders' %}selected{% endif %}>по числу заказов</option></select></label>
+  <button class="btn">Найти</button>
+</form>
+<div class="tw"><table>
+  <thead><tr><th>Телефон</th><th>Имя</th><th>Регистрация</th><th class="num">Заказов</th><th class="num">Сумма покупок</th><th>Статус</th></tr></thead>
+  <tbody>{% for c in page %}<tr><td><a href="{% url 'panel:customer' c.pk %}">+{{ c.phone }}</a></td><td>{{ c.full_name }}</td><td>{{ c.date_joined|date:"d.m.Y" }}</td><td class="num">{{ c.n_orders }}</td><td class="num">{{ c.spent|money }}</td><td>{% if c.is_active %}<span class="b ok">активен</span>{% else %}<span class="b bad">заблокирован</span>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="muted">Нет клиентов</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "panel/_pager.html" %}
+{% endblock %}

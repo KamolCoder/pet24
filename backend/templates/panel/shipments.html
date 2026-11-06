@@ -1,0 +1,14 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Заявки курьерам{% endblock %}
+{% block content %}
+{% include "panel/_delivery_tabs.html" with tab="shipments" %}
+<form class="filters" method="get">
+  <label>Статус<select name="status" onchange="this.form.submit()"><option value="">Все</option><option value="searching" {% if request.GET.status == 'searching' %}selected{% endif %}>Ищем курьера</option>{% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+</form>
+<div class="tw"><table>
+  <thead><tr><th>Создана</th><th>Заказ</th><th>Филиал</th><th>Служба</th><th>Статус</th><th>Курьер</th><th class="num">Стоимость</th><th>Ошибка</th></tr></thead>
+  <tbody>{% for s in page %}<tr><td>{{ s.created_at|date:"d.m H:i" }}</td><td><a href="{% url 'panel:order' s.order_id %}">{{ s.order.number }}</a></td><td>{{ s.order.branch.name }}</td><td>{{ s.provider }}</td><td><span class="b {{ s.status|status_badge }}">{{ s.get_status_display }}</span> <span class="muted small">{{ s.raw_status }}</span></td><td>{{ s.courier_name }} {{ s.courier_phone }}</td><td class="num">{{ s.cost|money }}</td><td class="wrap small muted">{{ s.error|truncatechars:100 }}</td></tr>
+  {% empty %}<tr><td colspan="8" class="muted">Нет заявок</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "panel/_pager.html" %}
+{% endblock %}

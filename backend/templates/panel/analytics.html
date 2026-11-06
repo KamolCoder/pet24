@@ -1,0 +1,104 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Аналитика{% endblock %}
+{% block content %}
+<h1>Аналитика продаж</h1>
+<form class="filters" method="get">
+  <label>С<input type="date" name="from" value="{{ p.date_from|date:'Y-m-d' }}"></label>
+  <label>По<input type="date" name="to" value="{{ p.date_to|date:'Y-m-d' }}"></label>
+  <label>Филиал<select name="branch"><option value="">Все</option>
+    {% for b in branches %}<option value="{{ b.id }}" {% if p.branch_id == b.id %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select></label>
+  <button class="btn">Показать</button>
+  <span class="link small">
+    <a href="?preset=7{% if p.branch_id %}&branch={{ p.branch_id }}{% endif %}">7 дней</a> ·
+    <a href="?preset=30{% if p.branch_id %}&branch={{ p.branch_id }}{% endif %}">30 дней</a> ·
+    <a href="?preset=90{% if p.branch_id %}&branch={{ p.branch_id }}{% endif %}">90 дней</a> ·
+    <a href="?preset=month{% if p.branch_id %}&branch={{ p.branch_id }}{% endif %}">с начала месяца</a>
+  </span>
+</form>
+<p class="muted small">Сравнение с предыдущим периодом такой же длины: {{ prev.date_from|date:"d.m.Y" }} – {{ prev.date_to|date:"d.m.Y" }}. В выручку входят оплаченные и не отменённые заказы.</p>
+
+{% with k=rep.kpi d=rep.delta pv=rep.prev %}
+<div class="grid">
+  <div class="panel stat"><div class="l">Выручка</div><div class="v">{{ k.revenue|money }}</div>
+    <div class="s">{% if d.revenue != None %}<span class="{% if d.revenue >= 0 %}up{% else %}down{% endif %}">{{ d.revenue|signed_pct }}</span> · {% endif %}было {{ pv.revenue|money }}</div>
+    <div class="f">Σ total оплаченных</div></div>
+  <div class="panel stat"><div class="l">Заказы</div><div class="v">{{ k.realized }}</div>
+    <div class="s">{% if d.realized != None %}<span class="{% if d.realized >= 0 %}up{% else %}down{% endif %}">{{ d.realized|signed_pct }}</span> · {% endif %}создано {{ k.created }}</div>
+    <div class="f">оплачены и не отменены</div></div>
+  <div class="panel stat"><div class="l">Средний чек</div><div class="v">{{ k.avg_check|money }}</div>
+    <div class="s">{% if d.avg_check != None %}<span class="{% if d.avg_check >= 0 %}up{% else %}down{% endif %}">{{ d.avg_check|signed_pct }}</span> · {% endif %}было {{ pv.avg_check|money }}</div>
+    <div class="f">выручка / заказы</div></div>
+  <div class="panel stat"><div class="l">Покупатели</div><div class="v">{{ k.customers }}</div>
+    <div class="s">новых {{ k.new_customers }} · повторных {{ k.repeat_share|pct }}</div>
+    <div class="f">повторные = ≥2 заказа в периоде</div></div>
+  <div class="panel stat"><div class="l">Конверсия в оплату</div><div class="v">{{ k.payment_rate|pct }}</div>
+    <div class="s">отмен {{ k.canceled }} ({{ k.cancel_rate|pct }})</div>
+    <div class="f">оплачено / создано</div></div>
+  <div class="panel stat"><div class="l">Товары / доставка</div><div class="v">{{ k.items_revenue|money }}</div>
+    <div class="s">доставка {{ k.delivery_revenue|money }}</div>
+    <div class="f">Σ items_total / Σ delivery_price</div></div>
+  <div class="panel stat"><div class="l">Маржа доставки</div><div class="v {% if k.delivery_margin < 0 %}neg{% endif %}">{{ k.delivery_margin|money }}</div>
+    <div class="s">курьеры {{ k.courier_cost|money }}</div>
+    <div class="f">доставка − стоимость курьеров</div></div>
+  <div class="panel stat"><div class="l">Медианы времени</div><div class="v">{{ k.total_median|dur }}</div>
+    <div class="s">сборка {{ k.assembly_median|dur }} · в пути {{ k.delivery_median|dur }}</div>
+    <div class="f">оплата → доставлено</div></div>
+</div>
+{% endwith %}
+
+<div class="cols">
+  <div><h2>Выручка по дням</h2><div class="panel">{{ chart_revenue }}</div></div>
+  <div><h2>Заказы по дням</h2><div class="panel">{{ chart_orders }}</div></div>
+</div>
+
+<h2>По филиалам</h2>
+<div class="tw"><table>
+  <thead><tr><th>Филиал</th><th class="num">Заказы</th><th class="num">Выручка</th><th>Доля</th><th class="num">Средний чек</th><th class="num">Сборка (медиана)</th><th class="num">Отмены</th><th class="num">Проблемы</th></tr></thead>
+  <tbody>
+  {% for r in rep.branches %}
+    <tr><td><a href="?from={{ p.date_from|date:'Y-m-d' }}&to={{ p.date_to|date:'Y-m-d' }}&branch={{ r.branch_id }}">{{ r.name }}</a></td>
+      <td class="num">{{ r.orders }}</td><td class="num">{{ r.revenue|money }}</td>
+      <td style="min-width:140px"><div style="display:flex;gap:8px;align-items:center"><div class="dbar" style="width:{% widthratio r.share 1 100 %}px"></div><span class="small muted">{{ r.share|pct }}</span></div></td>
+      <td class="num">{{ r.avg_check|money }}</td><td class="num">{{ r.assembly_median|dur }}</td>
+      <td class="num">{{ r.canceled }}</td><td class="num {% if r.problems %}neg{% endif %}">{{ r.problems }}</td></tr>
+  {% empty %}<tr><td colspan="8" class="muted">Нет оплаченных заказов за период</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+
+<div class="cols">
+  <div>
+    <h2>Способы оплаты</h2>
+    <div class="tw"><table><thead><tr><th>Способ</th><th class="num">Заказы</th><th class="num">Выручка</th><th class="num">Доля</th></tr></thead><tbody>
+      {% for r in rep.payments %}<tr><td>{{ r.method }}</td><td class="num">{{ r.orders }}</td><td class="num">{{ r.revenue|money }}</td><td class="num">{{ r.share|pct }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="muted">—</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+  <div>
+    <h2>Зоны доставки <span class="muted">маржа = получено за доставку − стоимость курьеров</span></h2>
+    <div class="tw"><table><thead><tr><th>Зона</th><th class="num">Заказы</th><th class="num">Бесплатных</th><th class="num">Получено</th><th class="num">Курьеры</th><th class="num">Ср. курьер</th><th class="num">Маржа</th></tr></thead><tbody>
+      {% for r in rep.zones %}<tr><td>{{ r.name }}</td><td class="num">{{ r.orders }}</td><td class="num">{{ r.free_share|pct }}</td><td class="num">{{ r.delivery_revenue|money }}</td><td class="num">{{ r.courier_cost|money }}</td><td class="num">{{ r.avg_cost|money }}</td><td class="num {% if r.margin < 0 %}neg{% endif %}">{{ r.margin|money }}</td></tr>
+      {% empty %}<tr><td colspan="7" class="muted">—</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
+<h2>Топ товаров <a href="{% qs export='products' %}">CSV (все)</a></h2>
+<div class="tw"><table>
+  <thead><tr><th>#</th><th>Товар</th><th class="num">Штук</th><th class="num">Заказов</th><th class="num">Выручка</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rep.products %}
+    <tr><td class="muted">{{ forloop.counter }}</td><td class="wrap">{{ r.name }}</td><td class="num">{{ r.qty }}</td><td class="num">{{ r.orders }}</td><td class="num">{{ r.revenue|money }}</td>
+      <td style="width:160px"><div class="dbar" style="width:{% widthratio r.bar 1 150 %}px"></div></td></tr>
+  {% empty %}<tr><td colspan="6" class="muted">—</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+
+<h2>По дням <a href="{% qs export='days' %}">CSV</a></h2>
+<details><summary>Таблица ({{ rep.days|length }} дн.)</summary>
+<div class="tw" style="margin-top:8px"><table>
+  <thead><tr><th>Дата</th><th class="num">Создано</th><th class="num">Оплачено</th><th class="num">Выручка</th><th class="num">Средний чек</th></tr></thead>
+  <tbody>{% for d in rep.days %}<tr><td>{{ d.date|date:"d.m.Y, D" }}</td><td class="num">{{ d.created }}</td><td class="num">{{ d.orders }}</td><td class="num">{{ d.revenue|money }}</td><td class="num">{{ d.avg_check|money }}</td></tr>{% endfor %}</tbody>
+</table></div>
+</details>
+{% endblock %}

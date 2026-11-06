@@ -1,0 +1,53 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}Обзор{% endblock %}
+{% block content %}
+<h1>Обзор <span class="muted small">{{ today|date:"d.m.Y" }}</span><span class="sp"></span><a class="button" href="{% url 'panel:analytics' %}">Аналитика →</a></h1>
+
+<div class="grid">
+  <div class="panel stat"><div class="l">Выручка сегодня</div><div class="v">{{ kpi.revenue|money }}</div><div class="s">заказов оплачено: {{ kpi.realized }}</div></div>
+  <div class="panel stat"><div class="l">Средний чек</div><div class="v">{{ kpi.avg_check|money }}</div><div class="s">создано заказов: {{ kpi.created }}</div></div>
+  <div class="panel stat"><div class="l">Маржа доставки</div><div class="v {% if kpi.delivery_margin < 0 %}neg{% endif %}">{{ kpi.delivery_margin|money }}</div><div class="s">получено {{ kpi.delivery_revenue|money }} − курьеры {{ kpi.courier_cost|money }}</div></div>
+  <div class="panel stat"><div class="l">Время сборки (медиана)</div><div class="v">{{ kpi.assembly_median|dur }}</div><div class="s">доставки: {{ kpi.delivery_median|dur }}</div></div>
+</div>
+
+<h2>Требует внимания</h2>
+<div class="grid">
+  <a class="panel stat" href="{% url 'panel:orders' %}?status=problem"><div class="l">Проблемные заказы</div><div class="v {% if alerts.problem %}neg{% endif %}">{{ alerts.problem }}</div><div class="s">ждут решения оператора</div></a>
+  <a class="panel stat" href="{% url 'panel:orders' %}?status=paid"><div class="l">Ждут сборки &gt; 15 мин</div><div class="v {% if alerts.waiting_long %}stale{% endif %}">{{ alerts.waiting_long }}</div><div class="s">оплачены, сборка не начата</div></a>
+  <a class="panel stat" href="{% url 'panel:orders' %}?payment_status=refund_required"><div class="l">Нужен возврат денег</div><div class="v {% if alerts.refund %}neg{% endif %}">{{ alerts.refund }}</div><div class="s">отменены после оплаты</div></a>
+  <a class="panel stat" href="{% url 'panel:shipments' %}?status=searching"><div class="l">Ищем курьера</div><div class="v">{{ alerts.courier_search }}</div><div class="s">активные заявки</div></a>
+</div>
+
+<h2>Заказы в работе</h2>
+<div class="grid">
+  {% for s, label, n in pipeline %}
+  <a class="panel stat" href="{% url 'panel:orders' %}?status={{ s }}"><div class="l">{{ label }}</div><div class="v">{{ n }}</div></a>
+  {% endfor %}
+</div>
+
+<h2>Выручка за 14 дней <a href="{% url 'panel:analytics' %}?preset=30">подробнее</a></h2>
+<div class="panel">{{ chart }}</div>
+
+<div class="cols" style="margin-top:12px">
+  <div>
+    <h2>Каталог</h2>
+    <div class="tw"><table><tbody>
+      <tr><td><a href="{% url 'panel:queue' %}">SKU без карточки (очередь)</a></td><td class="num">{% if content.queue %}<span class="b warn">{{ content.queue }}</span>{% else %}0{% endif %}</td></tr>
+      <tr><td><a href="{% url 'panel:products' %}?photo=no">Карточки без фото</a></td><td class="num">{% if content.no_photo %}<span class="b warn">{{ content.no_photo }}</span>{% else %}0{% endif %}</td></tr>
+      <tr><td><a href="{% url 'panel:products' %}?published=no">Не опубликованы</a></td><td class="num">{{ content.unpublished }}</td></tr>
+      <tr><td><a href="{% url 'panel:products' %}?published=yes">Опубликовано карточек</a></td><td class="num">{{ content.published }}</td></tr>
+      <tr><td><a href="{% url 'panel:crud' 'branches' %}">Филиалы без доставки или координат</a></td><td class="num">{{ content.branches_off }}</td></tr>
+    </tbody></table></div>
+  </div>
+  <div>
+    <h2>Синк со stockapi <a href="{% url 'panel:sync' %}">журнал</a></h2>
+    <div class="tw"><table><thead><tr><th>Что</th><th>Последний успешный</th><th>Статус</th></tr></thead><tbody>
+      {% for kind, s in sync.items %}
+      <tr><td>{{ s.label }}</td>
+          <td class="{% if s.last_ok.finished_at|stale:30 %}stale{% endif %}">{{ s.last_ok.finished_at|ago }}</td>
+          <td>{% if not s.last %}<span class="b off">нет</span>{% elif s.last.ok %}<span class="b ok">ok</span>{% else %}<span class="b bad" title="{{ s.last.error }}">ошибка</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "panel/base.html" %}{% load panel %}
+{% block title %}{{ g.name|default:"Новая карточка" }}{% endblock %}
+{% block content %}
+<h1><a href="{% url 'panel:products' %}">Каталог</a> / {{ g.name|default:"новая карточка" }}
+  {% if g %}{% if g.is_published %}<span class="b ok">опубликована</span>{% else %}<span class="b off">черновик</span>{% endif %}
+  <span class="sp"></span>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle_publish"><button class="{% if not g.is_published %}btn{% endif %}">{% if g.is_published %}Снять с публикации{% else %}Опубликовать{% endif %}</button></form>{% endif %}
+</h1>
+
+{% if g %}
+<h2>Фото <span class="muted">первое по порядку — главное; любое изображение пережимается в WebP 1200 px</span></h2>
+<div class="panel">
+  {% if images %}
+  <form method="post" id="sortform">{% csrf_token %}<input type="hidden" name="action" value="image_sort"></form>
+  <div class="thumbs">
+    {% for img in images %}
+    <figure><a href="{{ img.image.url }}" target="_blank"><img src="{{ img.thumb.url }}" alt=""></a>
+      <figcaption>
+        <input form="sortform" name="sort_{{ img.pk }}" value="{{ img.sort }}" type="number" min="0" title="Порядок">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="image_delete"><input type="hidden" name="image_id" value="{{ img.pk }}"><button class="btn-danger" title="Удалить" onclick="return confirm('Удалить фото?')">✕</button></form>
+      </figcaption></figure>
+    {% endfor %}
+  </div>
+  <p><button form="sortform">Сохранить порядок</button></p>
+  {% else %}<p class="muted">Фото нет — карточку нельзя опубликовать.</p>{% endif %}
+  <form method="post" enctype="multipart/form-data" class="filters" style="margin:12px 0 0">{% csrf_token %}
+    <input type="hidden" name="action" value="upload">
+    <input type="file" name="images" accept="image/*" multiple required style="height:auto">
+    <button class="btn">Загрузить</button>
+  </form>
+</div>
+{% endif %}
+
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="save">
+<h2>Описание</h2>
+<div class="panel">{% include "panel/_form_fields.html" %}</div>
+
+{% if g %}
+<h2>Фасовки (SKU из stockapi) <span class="muted">название, цена и активность приходят из stockapi</span></h2>
+{{ variants.management_form }}
+<div class="tw"><table>
+  <thead><tr><th>SKU</th><th>Фасовка</th><th>Порядок</th><th class="num">Цена</th><th>Старая цена</th><th>Вес, г</th><th>Остатки (реальные)</th><th></th></tr></thead>
+  <tbody>{% for fm, st in variant_rows %}{% with p=fm.instance %}<tr>
+    <td class="wrap">{{ fm.id }}{{ p.name }}<div class="muted small mono">{{ p.external_id }} · {{ p.barcode }}</div>{% if not p.is_active %}<span class="b off">не активен</span>{% endif %}</td>
+    <td>{{ fm.variant_label }}</td><td style="width:80px">{{ fm.variant_sort }}</td><td class="num">{{ p.price|money }}</td>
+    <td style="width:130px">{{ fm.old_price }}</td><td style="width:100px">{{ fm.weight_g }}</td>
+    <td class="small wrap">{% for b, q in st %}<span class="mono">{{ b }}: <b>{{ q|num }}</b></span>{% if not forloop.last %} · {% endif %}{% empty %}<span class="muted">нет в наличии</span>{% endfor %}</td>
+    <td><button form="unlink{{ p.pk }}" title="Отвязать">отвязать</button></td>
+    {{ fm.errors }}
+  </tr>{% endwith %}{% empty %}<tr><td colspan="8" class="muted">Нет SKU — привяжите ниже или через очередь</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endif %}
+<div class="filters" style="margin-top:16px"><button class="btn">Сохранить карточку</button><a class="link" href="{% url 'panel:products' %}">к списку</a></div>
+</form>
+
+{% if g %}
+{% for fm, st in variant_rows %}<form id="unlink{{ fm.instance.pk }}" method="post">{% csrf_token %}<input type="hidden" name="action" value="unlink"><input type="hidden" name="product_id" value="{{ fm.instance.pk }}"></form>{% endfor %}
+<h2>Привязать SKU</h2>
+<form method="post" class="filters">{% csrf_token %}<input type="hidden" name="action" value="attach">
+  <label>ID stockapi, штрихкод, код или артикул свободного SKU<input name="q" required style="width:320px"></label><button>Привязать</button>
+  <a class="link small" href="{% url 'panel:queue' %}">или выбрать в очереди</a>
+</form>
+<h2>Опасная зона</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><button class="btn-danger" onclick="return confirm('Удалить карточку? SKU вернутся в очередь, фото удалятся.')">Удалить карточку</button></form>
+{% endif %}
+{% endblock %}
