@@ -51,6 +51,7 @@ scripts/check.sh                       # ruff + migrations check + OpenAPI schem
 python manage.py test tests.test_orders  # one module
 python manage.py makemigrations        # after any model change, commit the migration
 python manage.py stockapi_sync [--full]
+python manage.py import_categories <dump.json>  # category tree from a dumpdata file; safe to re-run
 python manage.py seed_demo             # demo data into an EMPTY dev DB (DEBUG=1); login 998900000000 / admin12345
 DEBUG=1 python manage.py runserver
 ```

@@ -58,10 +58,14 @@ class Category(models.Model):
     )
     pet_type = models.ForeignKey(PetType, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="Вид")
     name = models.CharField("Название", max_length=200)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=120, unique=True)
     image = models.ImageField(upload_to="categories/", blank=True)
     sort = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    source_ref = models.CharField(
+        "Источник импорта", max_length=50, blank=True, db_index=True, editable=False,
+        help_text="ID категории в файле импорта (import_categories), чтобы повторный импорт не создавал дублей",
+    )
 
     class Meta:
         verbose_name = "Категория"
