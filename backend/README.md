@@ -70,7 +70,9 @@ python manage.py runserver
 
 При `DEBUG=1` задачи Celery выполняются синхронно, Redis не нужен. SMS-коды пишутся в лог (`SMS_BACKEND=console`).
 
-Тесты: `python manage.py test`
+Проверка перед коммитом (ruff + миграции + OpenAPI + тесты): `scripts/check.sh`
+
+Демо-данные в пустую dev-базу: `python manage.py seed_demo` → вход в `/panel/` `998900000000` / `admin12345`
 
 ## Прод (Docker)
 
